@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Masa: Kembara Masa & Waktu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #090d16 0%, #111827 50%, #1e1035 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+        .heading-font {
+            font-family: 'Fredoka', cursive;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .btn-glow {
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .btn-glow:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(234, 179, 8, 0.4);
+        }
+        .btn-glow:active {
+            transform: translateY(1px);
+        }
+        canvas {
+            background-color: #030712;
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.2);
+            border-radius: 1rem;
+        }
+        .modal-anim {
+            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulse-portal {
+            animation: pulseGlow 1.5s infinite alternate;
+        }
+        @keyframes pulseGlow {
+            from { box-shadow: 0 0 10px #a855f7, 0 0 20px #a855f7; }
+            to { box-shadow: 0 0 25px #ec4899, 0 0 40px #ec4899; }
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(168, 85, 247, 0.4);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen justify-between p-2 sm:p-4 select-none">
+
+    <header class="max-w-4xl w-full mx-auto mb-2 sm:mb-4">
+        <div class="glass-card rounded-2xl p-3 sm:p-4 flex flex-col md:flex-row justify-between items-center gap-3 border-b-4 border-amber-500">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-tr from-amber-400 to-yellow-500 p-3 rounded-xl shadow-lg text-slate-950 text-2xl sm:text-3xl font-black">
+                    <i class="fa-solid fa-ghost"></i>
+                </div>
+                <div>
+                    <h1 class="heading-font text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-purple-300 to-pink-300">
+                        Pac-Masa & Waktu
+                    </h1>
+                    <p class="text-xs sm:text-sm text-amber-200/80">Makan buah, jawab soalan masa & masuk portal!</p>
+                </div>
+            </div>
+
+            <!-- Score & Progress Stats -->
+            <div id="stats-bar" class="flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-xl border border-amber-500/30">
+                <button id="bgm-toggle-btn" onclick="toggleBGM()" class="text-amber-400 hover:text-amber-300 transition-colors p-2 rounded-lg bg-slate-800 border border-amber-500/30 text-lg" title="Buka/Tutup Muzik Latar Mozart">
+                    <i id="bgm-icon" class="fa-solid fa-music"></i>
+                </button>
+                <div class="h-8 w-px bg-slate-700"></div>
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Mata</span>
+                    <span id="score-display" class="heading-font text-xl sm:text-2xl font-bold text-amber-400">0</span>
+                </div>
+                <div class="h-8 w-px bg-slate-700"></div>
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Buah / Soalan</span>
+                    <span id="q-counter" class="heading-font text-xl sm:text-2xl font-bold text-indigo-300">0/5</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl w-full mx-auto flex-grow flex flex-col justify-center items-center relative">
+
+        <!-- VIEW 1: MENU UTAMA -->
+        <div id="view-menu" class="glass-card rounded-3xl p-6 sm:p-8 text-center w-full my-auto">
+            <div class="w-20 h-20 mx-auto mb-4 bg-amber-400/20 rounded-full flex items-center justify-center text-amber-400 text-4xl border-2 border-amber-400 animate-pulse">
+                <i class="fa-solid fa-pizza-slice"></i>
+            </div>
+            <h2 class="heading-font text-2xl sm:text-4xl font-bold text-amber-300 mb-2">Pilih Tahap Penguasaan Pacman</h2>
+            <p class="text-slate-300 mb-6 max-w-xl mx-auto text-xs sm:text-sm">
+                Gerakkan Pacman untuk makan buah-buahan di dalam labirin. Setiap buah akan membawa anda kepada soalan Matematik Masa & Waktu!
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- TP1 Card -->
+                <button onclick="startGame('tp1')" class="btn-glow glass-card p-5 rounded-2xl flex flex-col items-center text-center border-t-4 border-emerald-400 hover:border-emerald-300 group">
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-link"></i>
+                    </div>
+                    <span class="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full mb-2">TP 1</span>
+                    <h3 class="heading-font text-lg font-bold mb-1 text-white">Perkaitan Unit Masa</h3>
+                    <p class="text-xs text-slate-300">Menyatakan perkaitan antara unit masa (Jam, Hari, Minggu, Bulan, Tahun, Dekad, Abad).</p>
+                    <span class="mt-4 text-xs font-semibold text-emerald-400 flex items-center gap-1">Main Pacman <i class="fa-solid fa-play"></i></span>
+                </button>
+
+                <!-- TP3 Card -->
+                <button onclick="startGame('tp3')" class="btn-glow glass-card p-5 rounded-2xl flex flex-col items-center text-center border-t-4 border-blue-400 hover:border-blue-300 group">
+                    <div class="w-14 h-14 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-calculator"></i>
+                    </div>
+                    <span class="bg-blue-500/20 text-blue-300 text-xs font-bold px-3 py-1 rounded-full mb-2">TP 3</span>
+                    <h3 class="heading-font text-lg font-bold mb-1 text-white">Ayat Matematik</h3>
+                    <p class="text-xs text-slate-300">Menentukan kewajaran jawapan & menyelesaikan tambah/tolak hingga 3 nilai masa.</p>
+                    <span class="mt-4 text-xs font-semibold text-blue-400 flex items-center gap-1">Main Pacman <i class="fa-solid fa-play"></i></span>
+                </button>
+
+                <!-- TP6 Card -->
+                <button onclick="startGame('tp6')" class="btn-glow glass-card p-5 rounded-2xl flex flex-col items-center text-center border-t-4 border-purple-400 hover:border-purple-300 group">
+                    <div class="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <span class="bg-purple-500/20 text-purple-300 text-xs font-bold px-3 py-1 rounded-full mb-2">TP 6</span>
+                    <h3 class="heading-font text-lg font-bold mb-1 text-white">Penyelesaian Masalah</h3>
+                    <p class="text-xs text-slate-300">Selesaikan masalah harian rutin melibatkan pelbagai strategi penambahan & penolakan masa.</p>
+                    <span class="mt-4 text-xs font-semibold text-purple-400 flex items-center gap-1">Main Pacman <i class="fa-solid fa-play"></i></span>
+                </button>
+            </div>
+
+            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-xs text-slate-300 flex flex-wrap justify-around gap-2">
+                <div><span class="text-amber-400 font-bold">1 Hari</span> = 24 Jam</div>
+                <div><span class="text-amber-400 font-bold">1 Minggu</span> = 7 Hari</div>
+                <div><span class="text-amber-400 font-bold">1 Tahun</span> = 12 Bulan</div>
+                <div><span class="text-amber-400 font-bold">1 Dekad</span> = 10 Tahun</div>
+                <div><span class="text-amber-400 font-bold">1 Abad</span> = 100 Tahun</div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: PACMAN GAME CANVAS -->
+        <div id="view-game" class="hidden flex flex-col items-center w-full">
+            <div class="w-full flex justify-between items-center mb-2 px-1">
+                <span id="tp-badge" class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1 rounded-lg">
+                    <i class="fa-solid fa-gamepad me-1"></i> Pacman Mod
+                </span>
+                <span id="game-status-msg" class="text-xs text-slate-300 font-semibold animate-pulse">
+                    Makan Buah Untuk Soalan!
+                </span>
+                <button onclick="returnToMenu()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1">
+                    <i class="fa-solid fa-house"></i> Menu
+                </button>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative w-full max-w-[500px] aspect-square flex justify-center items-center">
+                <canvas id="pacmanCanvas" width="440" height="440" class="w-full h-full border-2 border-indigo-500/50"></canvas>
+            </div>
+
+            <!-- Touch Controls for Mobile Devices -->
+            <div class="mt-3 grid grid-cols-3 gap-2 w-48 sm:hidden">
+                <div></div>
+                <button onclick="handleTouchMove('UP')" class="bg-slate-800 text-amber-400 p-3 rounded-xl active:bg-amber-500 active:text-slate-950 font-bold text-center">
+                    <i class="fa-solid fa-arrow-up text-lg"></i>
+                </button>
+                <div></div>
+                <button onclick="handleTouchMove('LEFT')" class="bg-slate-800 text-amber-400 p-3 rounded-xl active:bg-amber-500 active:text-slate-950 font-bold text-center">
+                    <i class="fa-solid fa-arrow-left text-lg"></i>
+                </button>
+                <button onclick="handleTouchMove('DOWN')" class="bg-slate-800 text-amber-400 p-3 rounded-xl active:bg-amber-500 active:text-slate-950 font-bold text-center">
+                    <i class="fa-solid fa-arrow-down text-lg"></i>
+                </button>
+                <button onclick="handleTouchMove('RIGHT')" class="bg-slate-800 text-amber-400 p-3 rounded-xl active:bg-amber-500 active:text-slate-950 font-bold text-center">
+                    <i class="fa-solid fa-arrow-right text-lg"></i>
+                </button>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 hidden sm:block">Gunakan kekunci anak panah <i class="fa-solid fa-arrows-up-down-left-right mx-1 text-amber-400"></i> pada papat kekunci untuk menggerakkan Pacman.</p>
+        </div>
+
+        <!-- VIEW 3: QUESTION MODAL OVERLAY -->
+        <div id="question-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div class="glass-card modal-anim rounded-3xl p-5 sm:p-7 max-w-lg w-full border-2 border-amber-400/60 shadow-2xl relative">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="bg-amber-400/20 text-amber-300 font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1 border border-amber-400/30">
+                        <i class="fa-solid fa-apple-whole text-amber-400"></i> Buah Terkuak! Soalan <span id="modal-q-num">1</span>/5
+                    </span>
+                    <span class="text-xs text-indigo-300 font-semibold" id="modal-tp-label">TP 1</span>
+                </div>
+
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-indigo-500/30 mb-5 shadow-inner">
+                    <h3 id="question-text" class="heading-font text-base sm:text-xl font-bold text-center text-amber-200 leading-relaxed">
+                        <!-- Soalan diletakkan dinamik -->
+                    </h3>
+                </div>
+
+                <div id="options-container" class="grid grid-cols-1 gap-3 mb-4">
+                    <!-- Pilihan jawapan dinamik -->
+                </div>
+
+                <div id="feedback-box" class="hidden p-3 rounded-xl text-center text-xs font-semibold mb-3">
+                    <p id="feedback-text"></p>
+                    <div id="explanation-text" class="text-[11px] mt-1 font-normal opacity-90"></div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="next-btn" onclick="closeQuestionModal()" class="hidden btn-glow bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 text-xs sm:text-sm">
+                        Teruskan Pemburuan Buah <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 4: RESULT SCREEN -->
+        <div id="view-result" class="hidden glass-card rounded-3xl p-8 text-center max-w-lg mx-auto">
+            <div class="w-20 h-20 rounded-full bg-amber-400/20 text-amber-300 border-2 border-amber-400 flex items-center justify-center text-4xl mx-auto mb-4 animate-bounce">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="heading-font text-3xl font-bold text-white mb-2">Portal Selesai!</h2>
+            <p id="result-tp-text" class="text-indigo-300 text-sm mb-4">Anda telah berjaya meneroka portal ini.</p>
+
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700 mb-6">
+                <div class="text-xs text-slate-400 uppercase tracking-widest mb-1">Skor Pacman Anda</div>
+                <div id="final-score" class="heading-font text-5xl font-extrabold text-amber-400 mb-2">0 / 500</div>
+                <p id="grade-message" class="text-xs text-slate-300"></p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="retryCurrentTP()" class="flex-1 btn-glow bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Main Semula
+                </button>
+                <button onclick="returnToMenu()" class="flex-1 btn-glow bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-list"></i> Tahap Lain
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="max-w-4xl w-full mx-auto mt-4 text-center text-xs text-slate-400">
+        <p>Bahan Bantuan Belajar Matematik Sekolah Rendah • Masa & Waktu • Pacman Arcade Edition</p>
+    </footer>
+
+    <script>
+        // Database Soalan Mengikut TP (5 Soalan Setiap TP)
+        const questionBank = {
+            tp1: [
+                {
+                    q: "Berapakah perkaitan antara unit masa bagi 1 hari dan jam?",
+                    options: ["1 Hari = 12 Jam", "1 Hari = 24 Jam", "1 Hari = 60 Jam", "1 Hari = 7 Jam"],
+                    correct: 1,
+                    explain: "1 hari lengkap mengandungi 24 jam."
+                },
+                {
+                    q: "Pernyataan manakah yang menunjukkan perkaitan unit masa yang betul?",
+                    options: ["1 Minggu = 7 Hari", "1 Minggu = 10 Hari", "1 Minggu = 30 Hari", "1 Minggu = 24 Hari"],
+                    correct: 0,
+                    explain: "1 minggu terdiri daripada 7 hari."
+                },
+                {
+                    q: "Apakah perkaitan yang betul antara tahun dan bulan?",
+                    options: ["1 Tahun = 10 Bulan", "1 Tahun = 24 Bulan", "1 Tahun = 12 Bulan", "1 Tahun = 52 Bulan"],
+                    correct: 2,
+                    explain: "1 tahun mempunyai 12 bulan (Januari hingga Disember)."
+                },
+                {
+                    q: "Manakah perkaitan yang BENAR bagi unit dekad dan tahun?",
+                    options: ["1 Dekad = 100 Tahun", "1 Dekad = 10 Tahun", "1 Dekad = 5 Tahun", "1 Dekad = 12 Tahun"],
+                    correct: 1,
+                    explain: "1 dekad mewakili tempoh masa 10 tahun."
+                },
+                {
+                    q: "1 Abad bersamaan dengan berapa dekad dan tahun?",
+                    options: [
+                        "1 Abad = 10 Dekad = 100 Tahun",
+                        "1 Abad = 100 Dekad = 10 Tahun",
+                        "1 Abad = 12 Dekad = 120 Tahun",
+                        "1 Abad = 5 Dekad = 50 Tahun"
+                    ],
+                    correct: 0,
+                    explain: "1 abad = 10 dekad = 100 tahun."
+                }
+            ],
+            tp3: [
+                {
+                    q: "Selesaikan operasi tambah tiga nilai masa berikut:<br><span class='text-amber-300'>2 hari 5 jam + 1 hari 12 jam + 3 hari 10 jam = ?</span>",
+                    options: [
+                        "7 hari 3 jam",
+                        "6 hari 3 jam",
+                        "7 hari 5 jam",
+                        "6 hari 17 jam"
+                    ],
+                    correct: 0,
+                    explain: "Jumlah jam: 5 + 12 + 10 = 27 jam = 1 hari 3 jam. Jumlah hari: 2 + 1 + 3 + 1 = 7 hari 3 jam."
+                },
+                {
+                    q: "Kira ayat matematik berikut:<br><span class='text-amber-300'>5 minggu 2 hari - 1 minggu 4 hari + 2 minggu 1 hari = ?</span>",
+                    options: [
+                        "5 minggu 6 hari",
+                        "6 minggu 1 hari",
+                        "4 minggu 3 hari",
+                        "5 minggu 2 hari"
+                    ],
+                    correct: 0,
+                    explain: "(5 mggu 2 hari - 1 mggu 4 hari) = 3 mggu 5 hari. Kemudian + 2 mggu 1 hari = 5 minggu 6 hari."
+                },
+                {
+                    q: "Hitung nilai bagi:<br><span class='text-amber-300'>4 tahun 8 bulan + 2 tahun 9 bulan - 1 tahun 5 bulan = ?</span>",
+                    options: [
+                        "5 tahun 12 bulan",
+                        "5 tahun 8 bulan",
+                        "6 tahun 0 bulan",
+                        "6 tahun 5 bulan"
+                    ],
+                    correct: 2,
+                    explain: "4 thn 8 bln + 2 thn 9 bln = 6 thn 17 bln. Tolak 1 thn 5 bln = 5 thn 12 bln = 6 tahun 0 bulan."
+                },
+                {
+                    q: "Nilaikan ayat matematik tiga nilai masa ini:<br><span class='text-amber-300'>3 dekad 4 tahun + 1 dekad 8 tahun + 2 dekad 5 tahun = ?</span>",
+                    options: [
+                        "6 dekad 17 tahun",
+                        "7 dekad 7 tahun",
+                        "7 dekad 2 tahun",
+                        "6 dekad 7 tahun"
+                    ],
+                    correct: 1,
+                    explain: "Jumlah tahun = 4 + 8 + 5 = 17 tahun (1 dekad 7 tahun). Jumlah dekad = 3 + 1 + 2 + 1 = 7 dekad 7 tahun."
+                },
+                {
+                    q: "Cari jawapan bagi:<br><span class='text-amber-300'>8 abad 20 tahun - 3 abad 50 tahun + 1 abad 40 tahun = ?</span>",
+                    options: [
+                        "6 abad 10 tahun",
+                        "5 abad 70 tahun",
+                        "6 abad 30 tahun",
+                        "4 abad 90 tahun"
+                    ],
+                    correct: 0,
+                    explain: "8 abad 20 thn - 3 abad 50 thn = 4 abad 70 thn. Tambah 1 abad 40 thn = 5 abad 110 thn = 6 abad 10 tahun."
+                }
+            ],
+            tp6: [
+                {
+                    q: "Projek pembangunan mengambil masa 1 tahun 4 bulan (Fasa 1) dan 2 tahun 9 bulan (Fasa 2). Jika tempoh asal ialah 5 tahun, berapakah baki masa pembinaan yang tinggal?",
+                    options: [
+                        "0 tahun 11 bulan (11 bulan)",
+                        "2 tahun 1 bulan",
+                        "1 tahun 11 bulan",
+                        "1 tahun 1 bulan"
+                    ],
+                    correct: 0,
+                    explain: "Jumlah masa fasa = 1 thn 4 bln + 2 thn 9 bln = 4 thn 1 bln. Baki = 5 thn - 4 thn 1 bln = 11 bulan."
+                },
+                {
+                    q: "Encik Azman mengambil masa 2 hari 8 jam mengecat, 1 hari 14 jam memasang jubin, dan 1 hari 6 jam membersih kawasan. Berapakah jumlah masa keseluruhan?",
+                    options: [
+                        "4 hari 28 jam",
+                        "5 hari 4 jam",
+                        "5 hari 8 jam",
+                        "4 hari 12 jam"
+                    ],
+                    correct: 1,
+                    explain: "Jumlah jam = 8 + 14 + 6 = 28 jam = 1 hari 4 jam. Jumlah hari = 2 + 1 + 1 + 1 = 5 hari 4 jam."
+                },
+                {
+                    q: "Kajian arkeologi mengambil masa 2 abad 15 tahun di Tapak A dan 1 abad 40 tahun di Tapak B. Selepas tolak pertindihan 35 tahun, berapakah jumlah tempoh kajian?",
+                    options: [
+                        "3 abad 20 tahun",
+                        "3 abad 55 tahun",
+                        "3 abad 90 tahun",
+                        "2 abad 80 tahun"
+                    ],
+                    correct: 0,
+                    explain: "Jumlah kajian = 2 abad 15 thn + 1 abad 40 thn = 3 abad 55 thn. Tolak pertindihan (35 thn) = 3 abad 20 tahun."
+                },
+                {
+                    q: "Pasukan Pengakap berkhemah 2 minggu 3 hari, kemudian mengekspedisi 1 minggu 5 hari. Jika rancangan asal 5 minggu 1 hari, berapa harikah lebih awal mereka selesai?",
+                    options: [
+                        "1 minggu 0 hari (7 hari)",
+                        "0 minggu 5 hari",
+                        "1 minggu 1 hari",
+                        "0 minggu 6 hari"
+                    ],
+                    correct: 0,
+                    explain: "Jumlah aktiviti = 2 mggu 3 hari + 1 mggu 5 hari = 4 mggu 1 hari. Perbezaan dari 5 mggu 1 hari = 1 mggu 0 hari."
+                },
+                {
+                    q: "Umur bangunan ialah 1 dekad 8 tahun. Selepas pengubahsuaian 2 tahun 5 bulan dan struktur tambahan 3 tahun 9 bulan, berapakah jumlah umur bangunan & ubah suai?",
+                    options: [
+                        "2 dekad 4 tahun",
+                        "2 dekad 0 tahun",
+                        "1 dekad 14 tahun",
+                        "2 dekad 2 tahun"
+                    ],
+                    correct: 0,
+                    explain: "1 dekad 8 tahun + 2 tahun 5 bulan + 3 tahun 9 bulan = 1 dekad 8 tahun + 6 tahun = 2 dekad 4 tahun."
+                }
+            ]
+        };
+
+        // Web Audio API Synthesis
+        let audioCtx = null;
+        let bgmInterval = null;
+        let isBgmPlaying = false;
+        let bgmNoteIndex = 0;
+        let bgmGainNode = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        const mozartMelody = [
+            { note: 392.00, duration: 0.3 }, { note: 293.66, duration: 0.3 },
+            { note: 392.00, duration: 0.3 }, { note: 293.66, duration: 0.3 },
+            { note: 392.00, duration: 0.2 }, { note: 293.66, duration: 0.2 },
+            { note: 392.00, duration: 0.2 }, { note: 493.88, duration: 0.3 },
+            { note: 587.33, duration: 0.5 },
+            { note: 523.25, duration: 0.3 }, { note: 392.00, duration: 0.3 },
+            { note: 523.25, duration: 0.3 }, { note: 392.00, duration: 0.3 },
+            { note: 523.25, duration: 0.2 }, { note: 392.00, duration: 0.2 },
+            { note: 523.25, duration: 0.2 }, { note: 659.25, duration: 0.3 },
+            { note: 783.99, duration: 0.5 }
+        ];
+
+        function playPianoTone(freq, duration) {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                if (!bgmGainNode) {
+                    bgmGainNode = ctx.createGain();
+                    bgmGainNode.gain.setValueAtTime(0.06, now);
+                    bgmGainNode.connect(ctx.destination);
+                }
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.9);
+                osc.connect(gain);
+                gain.connect(bgmGainNode);
+                osc.start(now);
+                osc.stop(now + duration);
+            } catch (e) {}
+        }
+
+        function startMozartBGM() {
+            if (isBgmPlaying) return;
+            getAudioContext();
+            isBgmPlaying = true;
+            bgmNoteIndex = 0;
+            const bgmIcon = document.getElementById('bgm-icon');
+            if (bgmIcon) bgmIcon.className = "fa-solid fa-music text-amber-400 animate-pulse";
+
+            function playNextNote() {
+                if (!isBgmPlaying) return;
+                const noteData = mozartMelody[bgmNoteIndex];
+                playPianoTone(noteData.note, noteData.duration);
+                bgmNoteIndex = (bgmNoteIndex + 1) % mozartMelody.length;
+                bgmInterval = setTimeout(playNextNote, noteData.duration * 1000 * 0.85);
+            }
+            playNextNote();
+        }
+
+        function stopMozartBGM() {
+            isBgmPlaying = false;
+            if (bgmInterval) clearTimeout(bgmInterval);
+            const bgmIcon = document.getElementById('bgm-icon');
+            if (bgmIcon) bgmIcon.className = "fa-solid fa-volume-xmark text-slate-400";
+        }
+
+        function toggleBGM() {
+            if (isBgmPlaying) stopMozartBGM();
+            else startMozartBGM();
+        }
+
+        function playCorrectSound() {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0, now + idx * 0.08);
+                    gain.gain.linearRampToValueAtTime(0.25, now + idx * 0.08 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.35);
+                });
+                for (let i = 0; i < 5; i++) {
+                    const delay = 0.12 + i * 0.06;
+                    const bufSize = ctx.sampleRate * 0.07;
+                    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+                    const data = buf.getChannelData(0);
+                    for (let j = 0; j < bufSize; j++) data[j] = (Math.random() * 2 - 1) * Math.exp(-j / (bufSize * 0.3));
+                    const noise = ctx.createBufferSource();
+                    noise.buffer = buf;
+                    const filter = ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 1100;
+                    const gain = ctx.createGain();
+                    gain.gain.setValueAtTime(0.25, now + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.06);
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(ctx.destination);
+                    noise.start(now + delay);
+                }
+            } catch (e) {}
+        }
+
+        function playWrongSound() {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sawtooth';
+                osc1.frequency.setValueAtTime(160, now);
+                osc1.frequency.setValueAtTime(110, now + 0.15);
+                gain1.gain.setValueAtTime(0, now);
+                gain1.gain.linearRampToValueAtTime(0.45, now + 0.02);
+                gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.5);
+
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sawtooth';
+                osc2.frequency.setValueAtTime(340, now + 0.05);
+                osc2.frequency.exponentialRampToValueAtTime(80, now + 0.4);
+                gain2.gain.setValueAtTime(0.35, now + 0.05);
+                gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(now + 0.05);
+                osc2.stop(now + 0.5);
+            } catch (e) {}
+        }
+
+        const canvas = document.getElementById('pacmanCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Maze Grid (11x11 Grid): 1 = Wall, 0 = Path
+        const maze = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+            [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+            [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+
+        const tileSize = 40;
+        let pacman = { x: 1, y: 1, dirX: 0, dirY: 0, nextDirX: 0, nextDirY: 0, mouthAngle: 0.2, mouthSpeed: 0.02 };
+        let fruits = [];
+        let questionsAnsweredCount = 0;
+        let portalActive = false;
+        let portalPos = { x: 5, y: 5 };
+        let currentTP = 'tp1';
+        let score = 0;
+        let activeQuestionFruit = null;
+        let isQuestionModalOpen = false;
+        let animationFrameId = null;
+
+        // Fruit coordinates on valid maze paths
+        const fruitCoordinates = [
+            { x: 9, y: 1, color: '#ef4444', name: 'Epal', qIndex: 0 },
+            { x: 1, y: 9, color: '#f97316', name: 'Oren', qIndex: 1 },
+            { x: 9, y: 9, color: '#a855f7', name: 'Anggur', qIndex: 2 },
+            { x: 5, y: 1, color: '#3b82f6', name: 'Beri', qIndex: 3 },
+            { x: 9, y: 5, color: '#eab308', name: 'Pisang', qIndex: 4 }
+        ];
+
+        function resetGameCanvas() {
+            pacman = { x: 1, y: 1, dirX: 0, dirY: 0, nextDirX: 0, nextDirY: 0, mouthAngle: 0.2, mouthSpeed: 0.02 };
+            fruits = JSON.parse(JSON.stringify(fruitCoordinates));
+            questionsAnsweredCount = 0;
+            portalActive = false;
+            isQuestionModalOpen = false;
+            updateStatsUI();
+        }
+
+        function updateStatsUI() {
+            document.getElementById('score-display').textContent = score;
+            document.getElementById('q-counter').textContent = `${questionsAnsweredCount}/5`;
+        }
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+            if (isQuestionModalOpen) return;
+            switch(e.key) {
+                case 'ArrowUp': case 'w': case 'W':
+                    pacman.nextDirX = 0; pacman.nextDirY = -1; break;
+                case 'ArrowDown': case 's': case 'S':
+                    pacman.nextDirX = 0; pacman.nextDirY = 1; break;
+                case 'ArrowLeft': case 'a': case 'A':
+                    pacman.nextDirX = -1; pacman.nextDirY = 0; break;
+                case 'ArrowRight': case 'd': case 'D':
+                    pacman.nextDirX = 1; pacman.nextDirY = 0; break;
+            }
+        });
+
+        function handleTouchMove(dir) {
+            if (isQuestionModalOpen) return;
+            if (dir === 'UP') { pacman.nextDirX = 0; pacman.nextDirY = -1; }
+            if (dir === 'DOWN') { pacman.nextDirX = 0; pacman.nextDirY = 1; }
+            if (dir === 'LEFT') { pacman.nextDirX = -1; pacman.nextDirY = 0; }
+            if (dir === 'RIGHT') { pacman.nextDirX = 1; pacman.nextDirY = 0; }
+        }
+
+        function canMoveTo(gx, gy) {
+            if (gx < 0 || gy < 0 || gx >= 11 || gy >= 11) return false;
+            return maze[gy][gx] === 0;
+        }
+
+        let stepTimer = 0;
+        function updateGameLogic() {
+            if (isQuestionModalOpen) return;
+
+            stepTimer++;
+            if (stepTimer % 10 === 0) {
+                // Try applying queued direction
+                if (canMoveTo(pacman.x + pacman.nextDirX, pacman.y + pacman.nextDirY)) {
+                    pacman.dirX = pacman.nextDirX;
+                    pacman.dirY = pacman.nextDirY;
+                }
+                
+                // Move Pacman
+                if (canMoveTo(pacman.x + pacman.dirX, pacman.y + pacman.dirY)) {
+                    pacman.x += pacman.dirX;
+                    pacman.y += pacman.dirY;
+                }
+
+                // Check Fruit Collision
+                fruits.forEach((f, idx) => {
+                    if (!f.eaten && f.x === pacman.x && f.y === pacman.y) {
+                        f.eaten = true;
+                        activeQuestionFruit = f;
+                        openQuestionModal(f.qIndex);
+                    }
+                });
+
+                // Check Portal Collision
+                if (portalActive && pacman.x === portalPos.x && pacman.y === portalPos.y) {
+                    showResults();
+                }
+            }
+
+            // Animate Pacman mouth
+            pacman.mouthAngle += pacman.mouthSpeed;
+            if (pacman.mouthAngle > 0.45 || pacman.mouthAngle < 0.05) {
+                pacman.mouthSpeed = -pacman.mouthSpeed;
+            }
+        }
+
+        function drawMaze() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Maze Walls
+            for (let r = 0; r < 11; r++) {
+                for (let c = 0; c < 11; c++) {
+                    if (maze[r][c] === 1) {
+                        ctx.fillStyle = '#1e293b';
+                        ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                        ctx.strokeStyle = '#3b82f6';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(c * tileSize + 2, r * tileSize + 2, tileSize - 4, tileSize - 4);
+                    } else {
+                        // Path Grid Dots
+                        ctx.fillStyle = '#334155';
+                        ctx.beginPath();
+                        ctx.arc(c * tileSize + tileSize/2, r * tileSize + tileSize/2, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // Draw Fruits
+            fruits.forEach(f => {
+                if (!f.eaten) {
+                    const fx = f.x * tileSize + tileSize / 2;
+                    const fy = f.y * tileSize + tileSize / 2;
+                    
+                    // Outer glow
+                    ctx.shadowColor = f.color;
+                    ctx.shadowBlur = 12;
+                    ctx.fillStyle = f.color;
+                    ctx.beginPath();
+                    ctx.arc(fx, fy, 10, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Stem
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(fx, fy - 10);
+                    ctx.lineTo(fx + 3, fy - 14);
+                    ctx.stroke();
+                }
+            });
+
+            // Draw Portal if active
+            if (portalActive) {
+                const px = portalPos.x * tileSize + tileSize / 2;
+                const py = portalPos.y * tileSize + tileSize / 2;
+
+                ctx.shadowColor = '#ec4899';
+                ctx.shadowBlur = 20;
+
+                const time = Date.now() * 0.005;
+                const radius = 14 + Math.sin(time) * 3;
+
+                ctx.fillStyle = '#a855f7';
+                ctx.beginPath();
+                ctx.arc(px, py, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#e0e7ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(px, py, radius * 0.6, time, time + Math.PI * 1.5);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // Draw Pacman
+            const px = pacman.x * tileSize + tileSize / 2;
+            const py = pacman.y * tileSize + tileSize / 2;
+
+            let rotation = 0;
+            if (pacman.dirX === 1) rotation = 0;
+            if (pacman.dirX === -1) rotation = Math.PI;
+            if (pacman.dirY === 1) rotation = Math.PI / 2;
+            if (pacman.dirY === -1) rotation = -Math.PI / 2;
+
+            ctx.shadowColor = '#facc15';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.arc(
+                px, py, 14,
+                rotation + pacman.mouthAngle * Math.PI,
+                rotation + (2 - pacman.mouthAngle) * Math.PI
+            );
+            ctx.lineTo(px, py);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function gameLoop() {
+            updateGameLogic();
+            drawMaze();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        const viewMenu = document.getElementById('view-menu');
+        const viewGame = document.getElementById('view-game');
+        const viewResult = document.getElementById('view-result');
+        const questionModal = document.getElementById('question-modal');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackBox = document.getElementById('feedback-box');
+        const feedbackText = document.getElementById('feedback-text');
+        const explanationText = document.getElementById('explanation-text');
+        const nextBtn = document.getElementById('next-btn');
+
+        function startGame(tpKey) {
+            currentTP = tpKey;
+            score = 0;
+            resetGameCanvas();
+            startMozartBGM();
+
+            let badgeLabel = "TP 1: Perkaitan Unit Masa";
+            if (tpKey === 'tp3') badgeLabel = "TP 3: Ayat Matematik Masa";
+            if (tpKey === 'tp6') badgeLabel = "TP 6: Penyelesaian Masalah Masa";
+            document.getElementById('tp-badge').innerHTML = `<i class="fa-solid fa-gamepad me-1"></i> ${badgeLabel}`;
+            document.getElementById('modal-tp-label').textContent = badgeLabel.split(':')[0];
+
+            viewMenu.classList.add('hidden');
+            viewResult.classList.add('hidden');
+            viewGame.classList.remove('hidden');
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function returnToMenu() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            questionModal.classList.add('hidden');
+            viewGame.classList.add('hidden');
+            viewResult.classList.add('hidden');
+            viewMenu.classList.remove('hidden');
+        }
+
+        function retryCurrentTP() {
+            startGame(currentTP);
+        }
+
+        function openQuestionModal(qIndex) {
+            isQuestionModalOpen = true;
+            feedbackBox.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+
+            const qData = questionBank[currentTP][qIndex];
+            document.getElementById('modal-q-num').textContent = qIndex + 1;
+            questionText.innerHTML = qData.q;
+
+            optionsContainer.innerHTML = '';
+            qData.options.forEach((optText, i) => {
+                const btn = document.createElement('button');
+                btn.className = "btn-glow glass-card p-3 rounded-xl text-left font-semibold text-xs sm:text-sm text-slate-100 flex items-center justify-between group hover:border-amber-400 transition-all";
+                btn.onclick = () => checkAnswer(i, qIndex);
+                btn.innerHTML = `
+                    <span class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-400/30 text-amber-300 flex items-center justify-center font-bold text-xs group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+                            ${String.fromCharCode(65 + i)}
+                        </span>
+                        <span>${optText}</span>
+                    </span>
+                    <i class="fa-regular fa-circle text-slate-500 group-hover:text-amber-400"></i>
+                `;
+                optionsContainer.appendChild(btn);
+            });
+
+            questionModal.classList.remove('hidden');
+        }
+
+        let currentQuestionAnswered = false;
+        function checkAnswer(selectedIndex, qIndex) {
+            const qData = questionBank[currentTP][qIndex];
+            const optionButtons = optionsContainer.children;
+
+            // Disable re-clicking options
+            for (let btn of optionButtons) btn.onclick = null;
+
+            if (selectedIndex === qData.correct) {
+                score += 100;
+                optionButtons[selectedIndex].classList.add('bg-emerald-500/30', 'border-emerald-400');
+                optionButtons[selectedIndex].querySelector('i').className = "fa-solid fa-circle-check text-emerald-400";
+
+                feedbackBox.className = "p-3 rounded-xl text-center text-xs font-semibold mb-3 bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 block";
+                feedbackText.innerHTML = "<i class='fa-solid fa-face-smile me-1'></i>Tahniah! Jawapan TEPAT!";
+
+                playCorrectSound();
+            } else {
+                optionButtons[selectedIndex].classList.add('bg-rose-500/30', 'border-rose-400');
+                optionButtons[selectedIndex].querySelector('i').className = "fa-solid fa-circle-xmark text-rose-400";
+
+                optionButtons[qData.correct].classList.add('bg-emerald-500/20', 'border-emerald-500/50');
+                optionButtons[qData.correct].querySelector('i').className = "fa-solid fa-circle-check text-emerald-400";
+
+                feedbackBox.className = "p-3 rounded-xl text-center text-xs font-semibold mb-3 bg-rose-500/20 border border-rose-500/40 text-rose-200 block";
+                feedbackText.innerHTML = "<i class='fa-solid fa-face-frown me-1'></i>Aduh, jawapan kurang tepat.";
+
+                playWrongSound();
+            }
+
+            explanationText.textContent = qData.explain;
+            nextBtn.classList.remove('hidden');
+        }
+
+        function closeQuestionModal() {
+            questionModal.classList.add('hidden');
+            isQuestionModalOpen = false;
+
+            questionsAnsweredCount++;
+            updateStatsUI();
+
+            // All 5 questions answered -> Unlock Portal!
+            if (questionsAnsweredCount >= 5) {
+                portalActive = true;
+                document.getElementById('game-status-msg').textContent = "PORTAL TERBUKA! Masuk ke tengah labirin!";
+                document.getElementById('game-status-msg').className = "text-xs text-pink-400 font-bold animate-bounce";
+            } else {
+                document.getElementById('game-status-msg').textContent = "Cari dan makan buah seterusnya!";
+            }
+        }
+
+        function showResults() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            viewGame.classList.add('hidden');
+            viewResult.classList.remove('hidden');
+
+            document.getElementById('final-score').textContent = `${score} / 500`;
+
+            let tpTitle = "TP 1: Perkaitan Unit Masa";
+            if (currentTP === 'tp3') tpTitle = "TP 3: Ayat Matematik Masa";
+            if (currentTP === 'tp6') tpTitle = "TP 6: Penyelesaian Masalah Masa";
+
+            document.getElementById('result-tp-text').textContent = `Keputusan Mod Pacman ${tpTitle}`;
+
+            const gradeMsg = document.getElementById('grade-message');
+            if (score === 500) {
+                gradeMsg.textContent = "Hebat Pacman! Anda menguasai tahap ini 100% tanpa sebarang kesilapan!";
+                gradeMsg.className = "text-xs text-emerald-400 font-bold";
+            } else if (score >= 300) {
+                gradeMsg.textContent = "Syabas! Anda berjaya memasuki portal dengan skor yang cemerlang.";
+                gradeMsg.className = "text-xs text-amber-300 font-bold";
+            } else {
+                gradeMsg.textContent = "Jangan putus asa! Sila cuba lagi untuk mendapatkan markah penuh.";
+                gradeMsg.className = "text-xs text-rose-300 font-bold";
+            }
+        }
+    </script>
+</body>
+</html>
